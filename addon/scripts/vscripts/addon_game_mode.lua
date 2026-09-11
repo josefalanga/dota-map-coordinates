@@ -30,8 +30,14 @@ end
 
 -- Create the game mode when we activate
 function Activate()
-    GameRules.AddonTemplate = GameMode()
-    GameRules.AddonTemplate:InitGameMode()
+    local ok, err = pcall(function()
+        GameRules.AddonTemplate = GameMode()
+        GameRules.AddonTemplate:InitGameMode()
+    end)
+    if not ok then
+        print("ACTIVATE_ERROR: " .. tostring(err))
+        print(debug.traceback())
+    end
 end
 
 function v2c(v)
@@ -46,7 +52,6 @@ function DumpCoordinateData(keys, schema, out)
     
     for k, v in pairs(keys) do
         --print(v)
-        data[v] = {}
         local entities = Entities:FindAllByClassname(v)
         if v == "trigger_multiple" then
             for k, ent in pairs(entities) do
@@ -67,76 +72,62 @@ function DumpCoordinateData(keys, schema, out)
                         c.name = ent:GetName()
                         --print (ent:GetName())
                     end
+                    if data[v] == nil then data[v] = {} end
                     table.insert(data[v], c)
                 end
             end
         else
             for k, ent in pairs(entities) do
-                local a1 = ent:GetOrigin()
-                local b1 = v2c(a1)
-                -- add z to tree coordinates
-                if v == "ent_dota_tree" then
-                    b1.z = ent:GetOrigin().z
-                end
-                --print (ent:GetClassname())
-                if ent:GetName() ~= "" then
-                    b1.name = ent:GetName()
-                    --print (ent:GetName())
-                end
-                
-                if ent.HasAttackCapability and ent:HasAttackCapability() then
-                    if ent.GetAttackRange then
-                        --print (ent:GetAttackRange())
-                        b1.attackRange = ent:GetAttackRange()
+                local okE, b1 = pcall(function()
+                    local a1 = ent:GetOrigin()
+                    local r = v2c(a1)
+                    if v == "ent_dota_tree" then
+                        r.z = ent:GetOrigin().z
                     end
-                    if ent.GetBaseDamageMax then
-                        --print (ent:GetBaseDamageMax())
-                        b1.damageMax = ent:GetBaseDamageMax()
+                    if ent:GetName() ~= "" then
+                        r.name = ent:GetName()
                     end
-                    if ent.GetBaseDamageMin then
-                        --print (ent:GetBaseDamageMin())
-                        b1.damageMin = ent:GetBaseDamageMin()
+                    if ent.GetTeamNumber then
+                        r.team = ent:GetTeamNumber()
                     end
-                end
-                
-                if ent:GetTeamNumber() ~= 0 then
+                    if ent.HasAttackCapability and ent:HasAttackCapability() then
+                        if ent.GetAttackRange then
+                            r.attackRange = ent:GetAttackRange()
+                        end
+                        if ent.GetBaseDamageMax then
+                            r.damageMax = ent:GetBaseDamageMax()
+                        end
+                        if ent.GetBaseDamageMin then
+                            r.damageMin = ent:GetBaseDamageMin()
+                        end
+                    end
                     if ent.GetBaseDayTimeVisionRange then
-                        --print (ent:GetBaseDayTimeVisionRange())
-                        b1.dayVision = ent:GetBaseDayTimeVisionRange()
+                        r.dayVision = ent:GetBaseDayTimeVisionRange()
                     end
                     if ent.GetBaseNightTimeVisionRange then
-                        --print (ent:GetBaseNightTimeVisionRange())
-                        b1.nightVision = ent:GetBaseNightTimeVisionRange()
+                        r.nightVision = ent:GetBaseNightTimeVisionRange()
                     end
+                    if ent.GetBaseHealthRegen then
+                        r.healthRegen = ent:GetBaseHealthRegen()
+                    end
+                    if ent.GetBaseMaxHealth then
+                        r.health = ent:GetBaseMaxHealth()
+                    end
+                    if ent.GetPhysicalArmorValue then
+                        r.armor = ent:GetPhysicalArmorValue(false)
+                    end
+                    if ent.GetBaseAttackTime then
+                        r.bat = ent:GetBaseAttackTime(false)
+                    end
+                    if v ~= "ent_dota_tree" and ent.GetBoundingMaxs then
+                        r.bounds = {ent:GetBoundingMaxs().x, ent:GetBoundingMaxs().y}
+                    end
+                    return r
+                end)
+                if okE and b1 then
+                    if data[v] == nil then data[v] = {} end
+                    table.insert(data[v], b1)
                 end
-                
-                if ent.GetBaseHealthRegen then
-                    --print (ent:GetBaseHealthRegen())
-                    b1.healthRegen = ent:GetBaseHealthRegen()
-                end
-                if ent.GetBaseMaxHealth then
-                    --print (ent:GetBaseMaxHealth())
-                    b1.health = ent:GetBaseMaxHealth()
-                end
-                if ent.GetPhysicalArmorValue then
-                    --print (ent:GetPhysicalArmorValue())
-                    b1.armor = ent:GetPhysicalArmorValue(false)
-                end
-                if ent.GetTeamNumber then
-                    ---print (ent:GetTeamNumber())
-                    b1.team = ent:GetTeamNumber()
-                end
-                if ent.GetBaseAttackTime then
-                    --print (ent:GetBaseAttackTime())
-                    b1.bat = ent:GetBaseAttackTime()
-                end
-                
-                if v ~= "ent_dota_tree" and ent.GetBoundingMaxs then
-                    --print (ent:GetBaseAttackTime())
-                    b1.bounds = {ent:GetBoundingMaxs().x, ent:GetBoundingMaxs().y}
-                end
-
-                table.insert(data[v], b1)
             end
         end
     end
@@ -167,9 +158,18 @@ function GenerateMapData(out)
             "npc_dota_barracks",
             "npc_dota_filler",
             "npc_dota_fort",
-            "npc_dota_tower",
             "npc_dota_neutral_spawner",
-            "npc_dota_watch_tower"
+            "npc_dota_watch_tower",
+            "npc_dota_lantern",
+            "npc_dota_lotus_pool",
+            "npc_dota_unit_twin_gate",
+            "npc_dota_miniboss",
+            "npc_dota_ward",
+            "npc_dota_building",
+            "npc_dota_shrine_of_wisdom",
+            "npc_dota_shrine",
+            "npc_dota_effigy_statue",
+            "npc_dota_xp_fountain"
         },
         {
             dota_item_rune_spawner_powerup = "dota_item_rune_spawner",
@@ -430,9 +430,9 @@ function TestPointElevation(elevation_data, x, y, callback, DEBUG, delay)
                 pt2.ward = CreateUnitByName("npc_dota_observer_wards", Vector((pt2.x - 1) * 64 + worldMinX, (pt2.y - 1) * 64 + worldMinY, 0), false, nil, nil, 3)
                 --if DEBUG then print ("    ", pt2.x, pt2.y) end
                 if DEBUG then print ("    ", pt2.ward:GetOrigin(), pt2.ward:GetAbsOrigin()) end
-            end)
-        end
+        end)
         callback()
+    end
     end
 end
 
@@ -620,9 +620,12 @@ function OnTestNeutralRange(eventSourceIndex, args)
 end
 
 function GameMode:InitGameMode()
-    GenerateMapData("mapdata.json")
+    Timers:CreateTimer(2, function()
+        GenerateMapData("mapdata.json")
+    end)
     GameRules:SetTreeRegrowTime(99999999)
     GameRules:SetPreGameTime(3)
+    GameRules:SetCustomGameSetupAutoLaunchDelay(5)
     ListenToGameEvent("game_rules_state_change", Dynamic_Wrap(GameMode, "OnGameRulesStateChange"), self)
     CustomGameEventManager:RegisterListener( "submit", OnSubmit )
     CustomGameEventManager:RegisterListener( "clear", OnClear )

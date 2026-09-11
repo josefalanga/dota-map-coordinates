@@ -33,3 +33,7 @@ data/dire_basic_tools_no_wards.txt
 # Generated, versioned map bundles and transient pipeline work
 artifacts/
 .work/
+
+# Local extraction workspace
+datav2/
+.venv/
